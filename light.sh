@@ -1,18 +1,34 @@
 #!/bin/sh
 # Usage: light.sh red|yellow|green|off
-# Sends over USB if the board is plugged in, otherwise over WiFi.
-# Fire-and-forget so a missing or offline light never slows Claude down.
-PORT="${CLAUDE_LIGHT_PORT:-$(ls /dev/cu.usbmodem* /dev/cu.usbserial* /dev/cu.wchusbserial* 2>/dev/null | head -1)}"
-if [ -n "$PORT" ]; then
-  # macOS resets port settings when the port closes, so set them on the open handle.
-  # -hupcl stops macOS from toggling the reset line, which would reboot the board.
-  (
-    exec 3<>"$PORT"
-    stty 115200 -hupcl clocal raw -echo <&3
-    printf '%s\n' "$1" >&3
-  ) >/dev/null 2>&1 &
-else
-  HOST="${CLAUDE_LIGHT_HOST:-claude-light.local}"
-  curl -s -m 2 "http://$HOST/set?state=$1" >/dev/null 2>&1 &
+# Sends a color over USB serial. A missing board is intentionally a no-op.
+
+case "${1:-}" in
+  red|yellow|green|off) STATE="$1" ;;
+  *)
+    printf 'usage: %s red|yellow|green|off\n' "$0" >&2
+    exit 2
+    ;;
+esac
+
+PORT="${TRAFFIC_LIGHT_PORT:-${CODEX_LIGHT_PORT:-${CLAUDE_LIGHT_PORT:-}}}"
+if [ -z "$PORT" ]; then
+  for CANDIDATE in /dev/cu.usbmodem* /dev/cu.usbserial* /dev/cu.wchusbserial*; do
+    if [ -c "$CANDIDATE" ]; then
+      PORT="$CANDIDATE"
+      break
+    fi
+  done
 fi
+
+[ -n "$PORT" ] || exit 0
+[ -c "$PORT" ] || exit 0
+
+# macOS resets port settings when the port closes, so set them on the open
+# handle. -hupcl stops macOS from toggling reset and rebooting the board.
+(
+  exec 3<>"$PORT"
+  stty 115200 -hupcl clocal raw -echo <&3
+  printf '%s\n' "$STATE" >&3
+) >/dev/null 2>&1
+
 exit 0
