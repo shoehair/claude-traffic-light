@@ -62,7 +62,7 @@ boot, the light flashes red → yellow → green and then stays green.
 Run both idempotent installers from this repository:
 
 ```sh
-python3 scripts/install-user-hooks.py
+python3 scripts/install-codex-hooks.py
 python3 scripts/install-claude-hooks.py
 ```
 
