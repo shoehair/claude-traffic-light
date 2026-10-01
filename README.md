@@ -7,7 +7,7 @@ An ESP32 traffic light that shows what Claude Code is doing:
 - 🟢 **Green** – done
 - ⚫ **Off** – session ended
 
-Claude Code [hooks](https://docs.claude.com/en/docs/claude-code/hooks) call `light.sh`, which sends a request over WiFi to the ESP32 at `http://claude-light.local/set?state=<color>`.
+Claude Code [hooks](https://docs.claude.com/en/docs/claude-code/hooks) call `light.sh`, which sends the color to the ESP32 over the USB cable. WiFi is optional: if the board isn't plugged in, `light.sh` falls back to `http://claude-light.local/set?state=<color>`.
 
 ## Parts
 
@@ -34,14 +34,14 @@ If you're using an original ESP32 instead of an S3, change the pins at the top o
    arduino-cli config add board_manager.additional_urls https://espressif.github.io/arduino-esp32/package_esp32_index.json
    arduino-cli core update-index && arduino-cli core install esp32:esp32
    ```
-2. Copy `firmware/claude_light/secrets.h.example` to `secrets.h` in the same folder and fill in your WiFi details. The ESP32 needs a 2.4 GHz network.
+2. Copy `firmware/claude_light/secrets.h.example` to `secrets.h` in the same folder. Leave it empty for USB only, or fill in WiFi details (2.4 GHz, plain password — office networks that need a login won't work).
 3. Plug in the board, find its port with `arduino-cli board list`, then from the `firmware` folder run:
    ```bash
-   arduino-cli compile --upload -p /dev/cu.usbserial-XXXX --fqbn esp32:esp32:esp32s3 claude_light
+   arduino-cli compile --upload -p /dev/cu.usbserial-XXXX --fqbn esp32:esp32:esp32s3:CDCOnBoot=cdc claude_light
    ```
    If the upload stalls at "Connecting…", hold the BOOT button.
 
-The lights cycle while the board connects to WiFi, then stay solid green once it's connected.
+On boot the light flashes red → yellow → green and then stays green.
 
 ## Hooking up Claude Code
 
@@ -49,6 +49,6 @@ The lights cycle while the board connects to WiFi, then stay solid green once it
 2. Merge the `hooks` block from `hooks.json` into `~/.claude/settings.json`.
 3. Test it with `./light.sh red`.
 
-If `claude-light.local` doesn't resolve on your network, set `CLAUDE_LIGHT_HOST` to the board's IP address. You can see the IP in the serial monitor at 115200 baud.
+`light.sh` uses the first `/dev/cu.usbmodem*` or `/dev/cu.usbserial*` port it finds. If you have other USB serial devices plugged in, set `CLAUDE_LIGHT_PORT` to the right one (see `arduino-cli board list`). In WiFi mode, if `claude-light.local` doesn't resolve, set `CLAUDE_LIGHT_HOST` to the board's IP address instead.
 
 If several sessions are open, the light shows whatever happened most recently in any of them.
