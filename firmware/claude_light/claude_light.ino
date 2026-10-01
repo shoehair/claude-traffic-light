@@ -8,9 +8,9 @@
 #include "secrets.h"  // defines WIFI_SSID and WIFI_PASSWORD
 
 // The Open-Smart module's LEDs have built-in resistors and are active-high.
-const int PIN_RED = 25;
-const int PIN_YELLOW = 26;
-const int PIN_GREEN = 27;
+const int PIN_RED = 11;
+const int PIN_YELLOW = 12;
+const int PIN_GREEN = 13;
 
 WebServer server(80);
 String currentState = "off";

@@ -11,7 +11,7 @@ Claude Code [hooks](https://docs.claude.com/en/docs/claude-code/hooks) call `lig
 
 ## Parts
 
-- ESP32 dev board
+- ESP32-S3 dev board (ESP32-S3-DevKitC-1 style, e.g. N16R8)
 - Open-Smart RYG traffic light module (R, Y, G, GND pins)
 - 4 female-to-female jumper wires
 
@@ -19,10 +19,13 @@ Claude Code [hooks](https://docs.claude.com/en/docs/claude-code/hooks) call `lig
 
 | Light | ESP32   |
 |-------|---------|
-| R     | GPIO 25 |
-| Y     | GPIO 26 |
-| G     | GPIO 27 |
+| R     | 11      |
+| Y     | 12      |
+| G     | 13      |
 | GND   | GND     |
+
+All four are on the same side of the board, which is labeled 3V3, RST, 4, 5, 6…, and GND is at the bottom of that side.
+If you're using an original ESP32 instead of an S3, change the pins at the top of the `.ino` file (for example to 25, 26, 27) and use `--fqbn esp32:esp32:esp32`.
 
 ## Flashing
 
@@ -34,7 +37,7 @@ Claude Code [hooks](https://docs.claude.com/en/docs/claude-code/hooks) call `lig
 2. Copy `firmware/claude_light/secrets.h.example` to `secrets.h` in the same folder and fill in your WiFi details. The ESP32 needs a 2.4 GHz network.
 3. Plug in the board, find its port with `arduino-cli board list`, then from the `firmware` folder run:
    ```bash
-   arduino-cli compile --upload -p /dev/cu.usbserial-XXXX --fqbn esp32:esp32:esp32 claude_light
+   arduino-cli compile --upload -p /dev/cu.usbserial-XXXX --fqbn esp32:esp32:esp32s3 claude_light
    ```
    If the upload stalls at "Connecting…", hold the BOOT button.
 
