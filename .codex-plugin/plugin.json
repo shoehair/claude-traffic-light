@@ -1,0 +1,17 @@
+{
+  "name": "codex-traffic-light",
+  "version": "1.0.0",
+  "description": "Drive a USB-connected ESP32 traffic light from Codex lifecycle hooks.",
+  "author": {
+    "name": "shoehair, adapted for Codex"
+  },
+  "interface": {
+    "displayName": "Codex Traffic Light",
+    "shortDescription": "Show Codex status on a USB traffic light.",
+    "longDescription": "Uses Codex lifecycle hooks to show working, waiting, complete, and ended states on an ESP32 traffic light over USB serial.",
+    "developerName": "shoehair, adapted for Codex",
+    "category": "Productivity",
+    "capabilities": ["hooks"],
+    "defaultPrompt": "Help me configure or test my Codex traffic light."
+  }
+}

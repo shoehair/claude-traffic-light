@@ -1,54 +1,118 @@
-# Claude Code traffic light
+# Claude Code + Codex traffic light
 
-An ESP32 traffic light that shows what Claude Code is doing:
+An ESP32 traffic light that shows the state of local Claude Code and Codex
+chats:
 
-- 🟡 **Yellow** – working
-- 🔴 **Red** – waiting on you (permission prompt or a question)
-- 🟢 **Green** – done
-- ⚫ **Off** – session ended
+- 🟡 **Yellow** – the agent is working
+- 🔴 **Red** – the agent needs attention (approval, input, interruption, or error)
+- 🟢 **Green** – the turn is complete
+- ⚫ **Off** – the session ended
 
-Claude Code [hooks](https://docs.claude.com/en/docs/claude-code/hooks) call `light.sh`, which sends the color to the ESP32 over the USB cable. WiFi is optional: if the board isn't plugged in, `light.sh` falls back to `http://claude-light.local/set?state=<color>`.
+This is a USB-only adaptation of
+[shoehair/claude-traffic-light](https://github.com/shoehair/claude-traffic-light).
+It supports both [Claude Code hooks](https://code.claude.com/docs/en/hooks) and
+[Codex hooks](https://learn.chatgpt.com/docs/hooks). Wi-Fi, credentials, the web
+server, and mDNS have been removed.
 
-## Parts
+## Parts and wiring
 
-- ESP32-S3 dev board (ESP32-S3-DevKitC-1 style, e.g. N16R8)
-- Open-Smart RYG traffic light module (R, Y, G, GND pins)
-- 4 female-to-female jumper wires
+- ESP32-S3 dev board (ESP32-S3-DevKitC-1 style, for example N16R8)
+- Open-Smart RYG traffic light module (R, Y, G, and GND pins)
+- Four female-to-female jumper wires
 
-## Wiring
+| Light | ESP32 |
+| --- | --- |
+| R | 11 |
+| Y | 12 |
+| G | 13 |
+| GND | GND |
 
-| Light | ESP32   |
-|-------|---------|
-| R     | 11      |
-| Y     | 12      |
-| G     | 13      |
-| GND   | GND     |
+All four are on the side of the board labeled `3V3`, `RST`, `4`, `5`, `6`, …,
+with `GND` at the bottom. For an original ESP32 rather than an S3, change the
+pins at the top of the `.ino` file (for example, 25, 26, and 27) and use the
+matching fully qualified board name when compiling.
 
-All four are on the same side of the board, which is labeled 3V3, RST, 4, 5, 6…, and GND is at the bottom of that side.
-If you're using an original ESP32 instead of an S3, change the pins at the top of the `.ino` file (for example to 25, 26, 27) and use `--fqbn esp32:esp32:esp32`.
+## Flash the board
 
-## Flashing
+Install `arduino-cli` and the ESP32 core if needed:
 
-1. Install [arduino-cli](https://arduino.github.io/arduino-cli/) and the ESP32 core:
-   ```bash
-   arduino-cli config add board_manager.additional_urls https://espressif.github.io/arduino-esp32/package_esp32_index.json
-   arduino-cli core update-index && arduino-cli core install esp32:esp32
-   ```
-2. Copy `firmware/claude_light/secrets.h.example` to `secrets.h` in the same folder. Leave it empty for USB only, or fill in WiFi details (2.4 GHz, plain password — office networks that need a login won't work).
-3. Plug in the board, find its port with `arduino-cli board list`, then from the `firmware` folder run:
-   ```bash
-   arduino-cli compile --upload -p /dev/cu.usbserial-XXXX --fqbn esp32:esp32:esp32s3:CDCOnBoot=cdc claude_light
-   ```
-   If the upload stalls at "Connecting…", hold the BOOT button.
+```sh
+brew install arduino-cli
+arduino-cli config add board_manager.additional_urls \
+  https://espressif.github.io/arduino-esp32/package_esp32_index.json
+arduino-cli core update-index
+arduino-cli core install esp32:esp32
+```
 
-On boot the light flashes red → yellow → green and then stays green.
+Plug in the board, identify its port, and compile/upload:
 
-## Hooking up Claude Code
+```sh
+arduino-cli board list
+arduino-cli compile --upload \
+  -p /dev/cu.usbserial-XXXX \
+  --fqbn esp32:esp32:esp32s3:CDCOnBoot=cdc \
+  firmware/codex_light
+```
 
-1. Clone this repo to `~/dev/claude-traffic-light`. If you put it somewhere else, update the paths in `hooks.json`.
-2. Merge the `hooks` block from `hooks.json` into `~/.claude/settings.json`.
-3. Test it with `./light.sh red`.
+If the upload stalls at `Connecting…`, hold the board's **BOOT** button. On
+boot, the light flashes red → yellow → green and then stays green.
 
-`light.sh` uses the first `/dev/cu.usbmodem*` or `/dev/cu.usbserial*` port it finds. If you have other USB serial devices plugged in, set `CLAUDE_LIGHT_PORT` to the right one (see `arduino-cli board list`). In WiFi mode, if `claude-light.local` doesn't resolve, set `CLAUDE_LIGHT_HOST` to the board's IP address instead.
+## Install both integrations
 
-If several sessions are open, the light shows whatever happened most recently in any of them.
+Run both idempotent installers from this repository:
+
+```sh
+python3 scripts/install-user-hooks.py
+python3 scripts/install-claude-hooks.py
+```
+
+The Codex installer merges handlers into `~/.codex/hooks.json`. The Claude
+installer merges handlers into `~/.claude/settings.json`. Existing unrelated
+settings and hooks are preserved, and each installer creates a backup before
+updating an existing file:
+
+- `~/.codex/hooks.json.bak.codex-traffic-light`
+- `~/.claude/settings.json.bak.traffic-light`
+
+Restart both clients after installing. In Codex, run `/hooks` and review/trust
+the new non-managed hooks. In Claude Code, run `/hooks` to inspect the loaded
+configuration.
+
+The repository is also a valid Codex plugin. Its portable hook definition is
+`hooks/hooks.json`; `hooks/claude-hooks.json` is the equivalent Claude plugin
+hook definition.
+
+## Test and configure
+
+Set each color manually:
+
+```sh
+./light.sh red
+./light.sh yellow
+./light.sh green
+./light.sh off
+```
+
+The script uses the first matching `/dev/cu.usbmodem*`,
+`/dev/cu.usbserial*`, or `/dev/cu.wchusbserial*` device. If more than one USB
+serial device is attached, set the exact port before starting either client:
+
+```sh
+export TRAFFIC_LIGHT_PORT=/dev/cu.usbmodem101
+```
+
+`CODEX_LIGHT_PORT` and `CLAUDE_LIGHT_PORT` remain supported as fallbacks. A
+missing board is a silent no-op and never blocks either client. With several
+active chats, the light shows the most recently received lifecycle event.
+
+## State mapping
+
+| Event | Light |
+| --- | --- |
+| Session starts/resumes | Green |
+| User submits a prompt | Yellow |
+| Permission or structured-input request | Red |
+| Agent resumes after structured input | Yellow |
+| Turn completes | Green |
+| Tool failure or interruption | Red |
+| Session ends | Off |
