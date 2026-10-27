@@ -44,17 +44,21 @@ arduino-cli core update-index
 arduino-cli core install esp32:esp32
 ```
 
-Plug in the board, identify its port, and compile/upload:
+Plug in the board and compile/upload. This finds the board's USB port for you:
 
 ```sh
-arduino-cli board list
 arduino-cli compile --upload \
-  -p /dev/cu.usbserial-XXXX \
+  -p "$(ls /dev/cu.usbmodem* /dev/cu.usbserial* 2>/dev/null | head -1)" \
   --fqbn esp32:esp32:esp32s3:CDCOnBoot=cdc \
   firmware/codex_light
 ```
 
-If the upload stalls at `Connecting…`, hold the board's **BOOT** button. On
+If you have other USB devices plugged in and it picks the wrong one, run
+`arduino-cli board list` and pass the board's port to `-p` instead. ESP32-S3
+boards usually show up as `/dev/cu.usbmodem…`.
+
+If the upload stalls at `Connecting…`, hold **BOOT**, tap **RST**, let go of
+**BOOT**, and try again. On
 boot, the light flashes red → yellow → green and then stays green.
 
 ## Install both integrations
